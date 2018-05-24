@@ -1,0 +1,7 @@
+startPingAlive	KEYWORD1
+pingFault	KEYWORD1
+configTZ    KEYWORD1
+wifi_on     KEYWORD1
+wifi_off    KEYWORD1
+uart_set_loopback   KEYWORD1
+hard_reset_needed   KEYWORD1
