@@ -2,7 +2,7 @@
 #ifndef __ESPGOODIES_H
 #define __ESPGOODIES_H
 
-#include "TZ.h"
+#include "utility/TZ.h"
 
 class __FlashStringHelper;
 
