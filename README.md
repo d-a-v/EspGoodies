@@ -13,7 +13,7 @@ esp8266/Arduino goodies
 * NetDump (lwip2)  
   Packet sniffer library to help study network issues, check example-sketches  
   Log examples on serial console:
-  ```
+```
 14:07:01.854 ->  in 0  ARP who has 10.43.1.117 tell 10.43.1.254
 14:07:01.854 -> out 0  ARP 10.43.1.117 is at 5c:cf:7f:c3:ad:51
 
