@@ -22,6 +22,9 @@
 #include <ESP8266WiFi.h>
 #include <NetDump.h>
 #include <lwipopts.h>
+#include <lwip/init.h>
+
+#if LWIP_VERSION_MAJOR != 1
 
 static WiFiServer tcpdump_server(2); // port will be overwritten
 static WiFiClient tcpdump_client;    // only one allowed
@@ -128,3 +131,5 @@ void tcpdump_loop ()
         ptr = 0;
     }
 }
+
+#endif // !lwip-v1

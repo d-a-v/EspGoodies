@@ -20,6 +20,9 @@
 */
 
 #include <NetDump.h>
+#include <lwip/init.h>
+
+#if LWIP_VERSION_MAJOR != 1
 
 static void snap (Print& out)
 {
@@ -192,3 +195,5 @@ void netDump (Print& out, const char* ethdata, size_t size)
     else if (netDump_is_IPv6(ethdata)) out.println(F(" IPv6"));
     else out.printf(" eth proto 0x%04x\r\n", netDump_ethtype(ethdata));
 }
+
+#endif // !lwip-v1

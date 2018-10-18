@@ -5,6 +5,9 @@
 #include <lwip/arch.h>
 #include "PingAlive.h"
 
+#include <lwip/init.h>
+#if LWIP_VERSION_MAJOR != 1
+
 /**
  * @file
  * Ping sender module
@@ -181,3 +184,4 @@ int ping_init(const ip_addr_t* ping_addr)
 }
 
 #endif /* LWIP_RAW */
+#endif // !lwipv1

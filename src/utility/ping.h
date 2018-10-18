@@ -33,8 +33,7 @@ int ping_init (const ip_addr_t* ping_addr);
 
 inline int start_pingalive (uint32_t ipv4)
 {
-    ip_addr_t addr;
-    ip_addr_set_ip4_u32(&addr, ipv4);
+    ip_addr_t addr = IPADDR4_INIT(ipv4);
     return ping_init(&addr);
 }
 
