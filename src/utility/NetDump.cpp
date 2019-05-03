@@ -152,6 +152,16 @@ static void netDumpTCP (Print& out, const char* ethdata, size_t size)
     out.println();
 }
 
+static void netDumpDNS(Print& out, const char* dnsdata )
+{
+	out.printf("TXID=0x%04x ",ntoh16(dnsdata));
+	out.printf("Flags=0x%04x ",ntoh16(dnsdata+2));
+	out.printf("Q=%d ",ntoh16(dnsdata+4));
+	out.printf("ANR=%d ",ntoh16(dnsdata+6));
+	out.printf("ATR=%d ",ntoh16(dnsdata+8));
+	out.printf("ADR=%d ",ntoh16(dnsdata+10));
+}
+
 static void netDumpUDP (Print& out, const char* ethdata, size_t size)
 {
     out.print(F(" UDP "));
@@ -159,11 +169,28 @@ static void netDumpUDP (Print& out, const char* ethdata, size_t size)
         return snap(out);
 
     netDumpPort(out, ethdata);
-    uint16_t udplen = netDump_getUdpUsrLen(ethdata);
-    uint16_t iplen = netDump_getIpUsrLen(ethdata) - 8/*udp hdr size*/;
-    if (udplen != iplen)
-        out.printf(" len=%d?", iplen);
-    out.printf(" len=%d\r\n", udplen);
+
+    if ((netDump_getDstPort(ethdata) == 5353) || (netDump_getSrcPort(ethdata) == 5353))
+    {
+    	out.print(F(" MDNS "));
+    	netDumpDNS(out, ethdata + ETH_HDR_LEN + netDump_getIpHdrLen(ethdata) + 8);
+    }
+    else
+    if ((netDump_getDstPort(ethdata) == 53) || (netDump_getSrcPort(ethdata) == 53))
+    {
+      	out.print(F(" DNS "));
+       	netDumpDNS(out, ethdata + ETH_HDR_LEN + netDump_getIpHdrLen(ethdata) + 8);
+    }
+    else
+    {
+        uint16_t udplen = netDump_getUdpUsrLen(ethdata);
+        uint16_t iplen = netDump_getIpUsrLen(ethdata) - 8/*udp hdr size*/;
+        if (udplen != iplen)
+            out.printf(" len=%d?", iplen);
+        out.printf(" len=%d", udplen);
+    }
+    out.printf("\r\n");
+
 }
 
 static void netDumpIPv4 (Print& out, const char* ethdata, size_t size)
