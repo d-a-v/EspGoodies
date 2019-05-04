@@ -59,6 +59,7 @@ public:
 													   data[ETH_HDR_LEN + 15]
 												);
 									}
+									return ip;
 								   };
 	IPAddress destIP()          { IPAddress ip;
 									if (isIPv4())
@@ -69,15 +70,14 @@ public:
 													   data[ETH_HDR_LEN + 19]
 												);
 									}
+									return ip;
 								   };
 
 
 };
 
 using NetdumpFilter    = std::function<bool(NetdumpPacket&)>;
-using NetdumpCallbackF = std::function<void(NetdumpPacket&,NetdumpFilter)>;
 using NetdumpCallback  = std::function<void(NetdumpPacket&)>;
-
 
 class Netdump
 {
@@ -91,33 +91,41 @@ public:
     {
     	netDumpCallback = nc;
     }
+    void setCallback(NetdumpCallback nc, NetdumpFilter nf)
+    {
+    	netDumpFilter   = nf;
+    	netDumpCallback = nc;
+    }
+    void setFilter(NetdumpFilter nf)
+    {
+    	netDumpFilter = nf;
+    }
     void printDump(Print& out, NetdumpFilter nf = nullptr)
     {
     	out.printf("netDump starting\r\n");
-    	setCallback( std::bind(&Netdump::printDumpProcess, this, std::ref(out), std::placeholders::_1 , nf));
+    	setCallback( std::bind(&Netdump::printDumpProcess, this, std::ref(out), std::placeholders::_1), nf);
     }
     void fileDump(String fn, NetdumpFilter nf = nullptr)
     {
-    	if (!packetBuffer)
-    	{
-    		packetBuffer = new char[1024];
-    	}
-    	File f = SPIFFS.open(fn, "w");
-        *(uint32_t*)&packetBuffer[0] = 0xa1b2c3d4;
-    	*(uint32_t*)&packetBuffer[4] = 0x00040002;
-    	*(uint32_t*)&packetBuffer[8] = 0;
-        *(uint32_t*)&packetBuffer[12] = 0;
-    	*(uint32_t*)&packetBuffer[16] = 1024;
-    	*(uint32_t*)&packetBuffer[20] = 1;
 
-    	f.write(packetBuffer,24);
+    	char buf[24];
+
+    	File f = SPIFFS.open(fn, "w");
+        *(uint32_t*)&buf[0] = 0xa1b2c3d4;
+    	*(uint32_t*)&buf[4] = 0x00040002;
+    	*(uint32_t*)&buf[8] = 0;
+        *(uint32_t*)&buf[12] = 0;
+    	*(uint32_t*)&buf[16] = 1024;
+    	*(uint32_t*)&buf[20] = 1;
+
+    	f.write(buf,24);
     	f.close();
-    	setCallback( std::bind(&Netdump::fileDumpProcess, this, fn, std::placeholders::_1 , nf));
+    	setCallback( std::bind(&Netdump::fileDumpProcess, this, fn, std::placeholders::_1));
     }
     void tcpDump(uint16_t port, size_t bufsize, size_t snap, bool fast, NetdumpFilter nf = nullptr)
     {
     	// Get initialize code from netdumpout.cpp
-    	setCallback( std::bind(&Netdump::tcpDumpProcess, this, std::placeholders::_1 , nf));
+    	setCallback( std::bind(&Netdump::tcpDumpProcess, this, std::placeholders::_1));
     }
     void tcpLoop()
     {
@@ -127,6 +135,7 @@ public:
 
 private:
     NetdumpCallback netDumpCallback = nullptr;
+    NetdumpFilter   netDumpFilter   = nullptr;
 
     static Netdump* self;
 
@@ -135,13 +144,13 @@ private:
     	NetdumpPacket np(netif_idx, data, len, out, success);
     	if (self->netDumpCallback)
     	{
+    		if (self->netDumpFilter  && !self->netDumpFilter(np)) { return; }
     		self->netDumpCallback(np);
     	}
     }
 
-    void printDumpProcess(Print& out, NetdumpPacket np, NetdumpFilter nf)
+    void printDumpProcess(Print& out, NetdumpPacket np)
     {
-       if (!((nf) && (nf(np)))) { return; };
 
        if (np.len < ETH_HDR_LEN)
        {
@@ -154,12 +163,10 @@ private:
     	   out.printf("IPv4 Packet, source = %s, dest = %s\r\n", np.sourceIP().toString().c_str(),np.destIP().toString().c_str());
 		   return;
        }
-       out.printf("Unknown IPv4 packet\r\n");
+       out.printf("Unknown IPv4 packet, type = 0x%04x\r\n",np.ethType());
     }
-    void fileDumpProcess (String fn, NetdumpPacket np, NetdumpFilter nf)
+    void fileDumpProcess (String fn, NetdumpPacket np)
     {
-    	if (!((nf) && (nf(np)))) { return; };
-
     	File f = SPIFFS.open(fn, "a");
 
     	size_t incl_len = np.len > 1024 ? 1024 : np.len;
@@ -176,10 +183,9 @@ private:
     	f.write(np.data,incl_len);
     	f.close();
     }
-    void tcpDumpProcess(NetdumpPacket np, NetdumpFilter nf)
+    void tcpDumpProcess(NetdumpPacket np)
     {
-    	if (!((nf) && (nf(np)))) { return; };
-    	// Get capture code from netdumpout.cpp
+    	  	// Get capture code from netdumpout.cpp
     }
 
 };
