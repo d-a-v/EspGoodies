@@ -19,31 +19,7 @@
  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
-#include <NetDumpDAV.h>
+#include "Netdump.h"
+#include <lwip/init.h>
 
-void netDumpHex (Print& out, const char* data, size_t size, bool show_hex, bool show_ascii, size_t per_line)
-{
-    size_t start = 0;
-    
-    while (start < size)
-    {
-        size_t end = start + per_line;
-        if (end > size)
-            end = size;
-        if (show_hex)
-            for (size_t i = start; i < end; i++)
-                out.printf("%02x ", (unsigned char)data[i]);
-        if (show_ascii)
-        {
-            if (show_hex)
-                for (size_t i = end; i < start + per_line; i++)
-                    out.print("   ");
-            for (size_t i = start; i < end; i++)
-                out.printf("%c", data[i] >= 32 && data[i] < 128? data[i]: '.');
-        }
-        out.println();
-
-        start += per_line;
-    }
-}
-
+Netdump* Netdump::self;

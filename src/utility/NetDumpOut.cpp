@@ -20,7 +20,7 @@
 */
 
 #include <ESP8266WiFi.h>
-#include <NetDump.h>
+#include <NetDumpDAV.h>
 #include <lwipopts.h>
 #include <lwip/init.h>
 
