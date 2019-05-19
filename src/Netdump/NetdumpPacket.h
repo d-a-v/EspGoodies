@@ -52,7 +52,7 @@ public:
 	uint8_t  ipType()             { return isIPv4() ? data[ETH_HDR_LEN + 9] : data[ETH_HDR_LEN + 6]; };
 
 	uint16_t getIpHdrLen()        { return isIPv4() ? (((unsigned char)data[ETH_HDR_LEN]) & 0x0f) << 2 : 40 ;} // IPv6 is fixed length
-//	uint16_t getIpTotLen()        { return ntoh16(ETH_HDR_LEN + 2); }
+	uint16_t getIpTotLen()        { return ntoh16(ETH_HDR_LEN + 2); }
 //	uint16_t getIpOptLen()        { return getIpHdrLen() - 20; }
 //	uint16_t getIpUsrLen()        { return getIpTotLen() - getIpHdrLen(); }
 
@@ -60,6 +60,8 @@ public:
 	uint32_t getTcpAck()          { return ntoh32(ETH_HDR_LEN + getIpHdrLen() + 8); }
 	uint16_t getTcpFlags()        { return ntoh16(ETH_HDR_LEN + getIpHdrLen() + 12); }
     uint16_t getTcpWindow()       { return ntoh16(ETH_HDR_LEN + getIpHdrLen() + 14); }
+    uint8_t  getTcpHdrLen()       { return (data[ETH_HDR_LEN + getIpHdrLen() + 12] >> 4)*4;};//Header len is in multiple of 4 bytes
+    uint16_t getTcpLen()          { return getIpTotLen() - getIpHdrLen() - getTcpHdrLen() ;};
 
 	uint8_t  getIcmpType()        { return data[ETH_HDR_LEN + getIpHdrLen() + 0];}
 	uint8_t  getIgmpType()        { return data[ETH_HDR_LEN + getIpHdrLen() + 0];}
@@ -67,6 +69,9 @@ public:
     uint8_t getARPType()          { return data[ETH_HDR_LEN + 7]; }
 	bool    is_ARP_who()          { return getARPType() == 1; }
 	bool    is_ARP_is()           { return getARPType() == 2; }
+
+	uint8_t getUdpHdrLen()        { return 8;};
+	uint16_t getUdpLen()          { return ntoh16(ETH_HDR_LEN + getIpHdrLen() + 4);};
 
 
 	bool isARP()                  { return (ethType() == 0x0806); };
@@ -80,7 +85,7 @@ public:
 	bool isMDNS()                 { return hasPort(5353);};
 	bool isDNS()                  { return hasPort(53);};
 	bool isSSDP()                 { return hasPort(1900);};
-	bool isDHCP()                 { return (hasPort(546) || hasPort(547));};
+	bool isDHCP()                 { return (hasPort(546) || hasPort(547) || hasPort(67) || hasPort(68));};
 	bool isWSDD()                 { return (hasPort(3702));};
 
 
@@ -121,8 +126,8 @@ public:
 	uint16_t getDstPort()        { return ntoh16(ETH_HDR_LEN + getIpHdrLen() + 2); }
 	bool     hasPort(uint16_t p) { return ((getSrcPort() == p) || (getDstPort() == p));}
 
-    String toString();
-
+    String toString(bool includeHex = false);
+    void dumpHex (Print& out, String indent, const char* data, size_t size);
 
 };
 

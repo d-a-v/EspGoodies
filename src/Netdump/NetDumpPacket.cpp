@@ -22,7 +22,30 @@
 #include "Netdump.h"
 #include <lwip/init.h>
 
-String NetdumpPacket::toString()
+void NetdumpPacket::dumpHex (Print& out, String indent, const char* data, size_t size)
+{
+    size_t start = 0;
+
+    while (start < size)
+    {
+        size_t end = start + 16;
+        if (end > size)
+            end = size;
+        out.printf("%s",indent.c_str());
+        for (size_t i = start; i < end; i++)
+                out.printf("%02x ", (unsigned char)data[i]);
+        for (size_t i = end; i < start + 16; i++)
+                out.print("   ");
+        for (size_t i = start; i < end; i++)
+                out.printf("%c", data[i] >= 32 && data[i] < 128? data[i]: '.');
+        out.println();
+
+        start += 16;
+    }
+}
+
+
+String NetdumpPacket::toString(bool includeHex)
 {
 	StreamString sstr;
 	sstr.reserve(128);
@@ -63,29 +86,37 @@ String NetdumpPacket::toString()
               sstr.printf("ATR=%d ",ntoh16(ETH_HDR_LEN + getIpHdrLen() + 8+8));
               sstr.printf("ADR=%d ",ntoh16(ETH_HDR_LEN + getIpHdrLen() + 8+10));
               sstr.printf("\r\n");
-              return sstr;
  		   }
- 		   String udpType;
-
-		   if (isSSDP())
+ 		   else
  		   {
-			   udpType = "SSDP";
+ 	 		   String udpType;
+
+ 			   if (isSSDP())
+ 	 		   {
+ 				   udpType = "SSDP";
+ 	 		   }
+ 			   else if (isDHCP())
+ 			   {
+ 				   udpType = "DHCP";
+ 			   }
+ 			   else if (isWSDD())
+ 			   {
+ 				   udpType = "WSDD";
+ 			   }
+ 			   else
+ 			   {
+ 				   udpType = "UDP ";
+ 			   }
+ 			   sstr.printf("%s %s>%s ",udpType.c_str(),sourceIP().toString().c_str(),destIP().toString().c_str());
+ 			   sstr.printf("%d:%d",getSrcPort(),getDstPort());
+ 	 		   sstr.printf("\r\n");
  		   }
-		   else if (isDHCP())
-		   {
-			   udpType = "DHCP";
-		   }
-		   else if (isWSDD())
-		   {
-			   udpType = "WSDD";
-		   }
-		   else
-		   {
-			   udpType = "UDP ";
-		   }
-		   sstr.printf("%s %s>%s ",udpType.c_str(),sourceIP().toString().c_str(),destIP().toString().c_str());
-		   sstr.printf("%d:%d",getSrcPort(),getDstPort());
- 		   sstr.printf("\r\n");
+ 		   if (includeHex)
+ 		   {
+         	   dumpHex(sstr,"           H ",&data[ETH_HDR_LEN + getIpHdrLen()],getUdpHdrLen());
+         	   dumpHex(sstr,"           D ",&data[ETH_HDR_LEN + getIpHdrLen() + getUdpHdrLen()],getUdpLen());
+ 		   }
+
  		   return sstr;
  	   }
  	   else if (isTCP())
@@ -100,8 +131,13 @@ String NetdumpPacket::toString()
      	      if (flags & (1 << i))
      	          sstr.print(chars[i]);
      	   sstr.print(']');
-     	   sstr.printf("seq: %u, ack: %u, wnd: %u ",getTcpSeq(),getTcpAck(),getTcpWindow());
+     	   sstr.printf(" len: %u seq: %u, ack: %u, wnd: %u ",getTcpLen(), getTcpSeq(),getTcpAck(),getTcpWindow());
      	   sstr.printf("\r\n");
+     	   if (includeHex)
+     	   {
+         	   dumpHex(sstr,"           H ",&data[ETH_HDR_LEN + getIpHdrLen()],getTcpHdrLen());
+         	   dumpHex(sstr,"           D ",&data[ETH_HDR_LEN + getIpHdrLen() + getTcpHdrLen()],getTcpLen());
+     	   }
      	   return sstr;
  	   }
  	   else if (isICMP())
