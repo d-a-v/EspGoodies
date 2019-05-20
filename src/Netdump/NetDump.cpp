@@ -37,17 +37,16 @@ void Netdump::setFilter(NetdumpFilter nf)
 {
 	netDumpFilter = nf;
 }
-void Netdump::printDump(Print& out, NetdumpFilter nf)
+void Netdump::printDump(Print& out, bool includeHex, NetdumpFilter nf)
 {
 	out.printf("netDump starting\r\n");
-	setCallback( std::bind(&Netdump::printDumpProcess, this, std::ref(out), std::placeholders::_1), nf);
+	setCallback( std::bind(&Netdump::printDumpProcess, this, std::ref(out), includeHex, std::placeholders::_1), nf);
 }
-void Netdump::fileDump(String fn, NetdumpFilter nf)
+void Netdump::fileDump(File outfile, NetdumpFilter nf)
 {
 
 	char buf[24];
 
-	File f = SPIFFS.open(fn, "w");
     *(uint32_t*)&buf[0] = 0xa1b2c3d4;
 	*(uint32_t*)&buf[4] = 0x00040002;
 	*(uint32_t*)&buf[8] = 0;
@@ -55,18 +54,18 @@ void Netdump::fileDump(String fn, NetdumpFilter nf)
 	*(uint32_t*)&buf[16] = 1024;
 	*(uint32_t*)&buf[20] = 1;
 
-	f.write(buf,24);
-	f.close();
-	setCallback( std::bind(&Netdump::fileDumpProcess, this, fn, std::placeholders::_1));
+	outfile.write(buf,24);
+	setCallback( std::bind(&Netdump::fileDumpProcess, this, outfile, std::placeholders::_1));
 }
-void Netdump::tcpDump(uint16_t port, size_t bufsize, size_t snap, bool fast, NetdumpFilter nf)
+void Netdump::tcpDump(WiFiServer &tcpDumpServer, NetdumpFilter nf)
 {
 	// Get initialize code from netdumpout.cpp
-	setCallback( std::bind(&Netdump::tcpDumpProcess, this, std::placeholders::_1));
-}
-void Netdump::tcpLoop()
-{
-	// Get loop code from netdumpout.cpp
+	if (packetBuffer) delete packetBuffer;
+	packetBuffer = new char[2048];
+	bufferIndex = 0;
+
+	schedule_function(std::bind(&Netdump::tcpDumpLoop,this,std::ref(tcpDumpServer)));
+	Serial.printf("scheduled\r\n");
 }
 
 void Netdump::capture (int netif_idx, const char* data, size_t len, int out, int success)
@@ -79,14 +78,12 @@ void Netdump::capture (int netif_idx, const char* data, size_t len, int out, int
 	}
 }
 
-void Netdump::printDumpProcess(Print& out, NetdumpPacket np)
+void Netdump::printDumpProcess(Print& out, bool includeHex, NetdumpPacket np)
 {
-	out.printf("%s",np.toString(true).c_str());
+	out.printf("%s",np.toString(includeHex).c_str());
 }
-void Netdump::fileDumpProcess (String fn, NetdumpPacket np)
+void Netdump::fileDumpProcess (File outfile, NetdumpPacket np)
 {
-	File f = SPIFFS.open(fn, "a");
-
 	size_t incl_len = np.len > 1024 ? 1024 : np.len;
 	char buf[16];
 
@@ -96,12 +93,73 @@ void Netdump::fileDumpProcess (String fn, NetdumpPacket np)
 	*(uint32_t*)&buf[4] = tv.tv_usec;
 	*(uint32_t*)&buf[8] = incl_len;
 	*(uint32_t*)&buf[12] = np.len;
-	f.write(buf,16);
+	outfile.write(buf,16);
 
-	f.write(np.data,incl_len);
-	f.close();
+	outfile.write(np.data,incl_len);
 }
 void Netdump::tcpDumpProcess(NetdumpPacket np)
 {
 	  	// Get capture code from netdumpout.cpp
+    if (   np.isIPv4() && np.isTCP()
+        && (   ( np.out && np.getSrcPort() == tcpDumpClient.localPort())
+            || (!np.out && np.getDstPort() == tcpDumpClient.localPort())
+           )
+       )
+    {
+        // skip myself
+        return;
+    }
+	size_t incl_len = np.len > 1024 ? 1024 : np.len;
+
+    struct timeval tv;
+	gettimeofday(&tv, nullptr);
+    *(uint32_t*)&packetBuffer[bufferIndex] = tv.tv_sec;
+	*(uint32_t*)&packetBuffer[bufferIndex + 4] = tv.tv_usec;
+	*(uint32_t*)&packetBuffer[bufferIndex + 8] = incl_len;
+	*(uint32_t*)&packetBuffer[bufferIndex + 12] = np.len;
+	bufferIndex+=16;
+	memcpy(&packetBuffer[bufferIndex], np.data, incl_len);
+    bufferIndex += incl_len;
+	printDumpProcess(Serial, false, np);
+	if (bufferIndex && tcpDumpClient && tcpDumpClient.availableForWrite() >= bufferIndex)
+	{
+        tcpDumpClient.write(packetBuffer, bufferIndex);
+        bufferIndex = 0;
+	}
+
+
+}
+void Netdump::tcpDumpLoop(WiFiServer &tcpDumpServer)
+{
+
+    if (tcpDumpServer.hasClient())
+    {
+        tcpDumpClient = tcpDumpServer.available();
+        //if (fastsend)
+            tcpDumpClient.setNoDelay(true);
+
+
+        // pcap-savefile(5) capture preamble
+        *(uint32_t*)&packetBuffer[0] = 0xa1b2c3d4;
+        *(uint32_t*)&packetBuffer[4] = 0x00040002;
+        *(uint32_t*)&packetBuffer[8] = 0;
+        *(uint32_t*)&packetBuffer[12] = 0;
+        *(uint32_t*)&packetBuffer[16] = 1024;
+        *(uint32_t*)&packetBuffer[20] = 1;
+        tcpDumpClient.write(packetBuffer, 24);
+        bufferIndex = 0;
+        setCallback(std::bind(&Netdump::tcpDumpProcess,this,std::placeholders::_1));
+        Serial.printf("client started\r\n");
+    }
+    if (!tcpDumpClient || !tcpDumpClient.connected())
+    {
+    	setCallback(nullptr);
+    }
+    if (bufferIndex && tcpDumpClient && tcpDumpClient.availableForWrite() >= bufferIndex)
+    {
+    	Serial.printf("tcp write %d\r\n",bufferIndex);
+        tcpDumpClient.write(packetBuffer, bufferIndex);
+        bufferIndex = 0;
+    }
+    schedule_function(std::bind(&Netdump::tcpDumpLoop,this,std::ref(tcpDumpServer)));
 }

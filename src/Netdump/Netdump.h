@@ -29,6 +29,8 @@
 #include <IPAddress.h>
 #include <StreamString.h>
 #include "NetdumpPacket.h"
+#include <ESP8266WiFi.h>
+#include "Schedule.h"
 
 
 using NetdumpFilter    = std::function<bool(NetdumpPacket&)>;
@@ -40,14 +42,12 @@ public:
     Netdump ()			{phy_capture = capture;self=this;};
     virtual ~Netdump() 	{phy_capture = nullptr;};
 
-    char* packetBuffer;
     void setCallback(NetdumpCallback nc);
     void setCallback(NetdumpCallback nc, NetdumpFilter nf);
     void setFilter(NetdumpFilter nf);
-    void printDump(Print& out, NetdumpFilter nf = nullptr);
-    void fileDump(String fn, NetdumpFilter nf = nullptr);
-    void tcpDump(uint16_t port, size_t bufsize, size_t snap, bool fast, NetdumpFilter nf = nullptr);
-    void tcpLoop();
+    void printDump(Print& out, bool includeHex, NetdumpFilter nf = nullptr);
+    void fileDump(File outfile, NetdumpFilter nf = nullptr);
+    void tcpDump(WiFiServer &tcpDumpServer, NetdumpFilter nf = nullptr);
 
 private:
     NetdumpCallback netDumpCallback = nullptr;
@@ -56,9 +56,14 @@ private:
     static Netdump* self;
 
     static void capture (int netif_idx, const char* data, size_t len, int out, int success);
-    void printDumpProcess(Print& out, NetdumpPacket np);
-    void fileDumpProcess (String fn, NetdumpPacket np);
+    void printDumpProcess(Print& out, bool includeHex, NetdumpPacket np);
+    void fileDumpProcess (File outfile, NetdumpPacket np);
     void tcpDumpProcess(NetdumpPacket np);
- };
+    void tcpDumpLoop(WiFiServer &tcpDumpServer);
+
+	WiFiClient tcpDumpClient;
+    char* packetBuffer;
+    size_t bufferIndex;
+};
 
 #endif /* LIBRARIES_ESPGOODIES_HR_SRC_NETDUMP_H_ */
