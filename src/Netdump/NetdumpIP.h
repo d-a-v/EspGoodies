@@ -11,6 +11,7 @@
 #include <stdint.h>
 #include <lwip/init.h>
 #include <StreamString.h>
+#include <IPAddress.h>
 
 class NetdumpIP
 {
@@ -20,6 +21,8 @@ public:
 
 	NetdumpIP(uint8_t first_octet, uint8_t second_octet, uint8_t third_octet, uint8_t fourth_octet);
 	NetdumpIP(const uint8_t *address, bool V4 = true);
+	NetdumpIP(IPAddress ip);
+	NetdumpIP(String ip);
 
 	uint8_t& operator[](int index)
 	{
@@ -44,10 +47,28 @@ private:
 	bool isUnset() { return (ipv == IPversion::UNSET);};
 	bool isSet() { return (ipv != IPversion::UNSET);};
 
+	bool compareRaw(IPversion v, const uint8_t* a,  const uint8_t* b);
+	bool compareIP(IPAddress ip);
+	bool compareIP(NetdumpIP nip) ;
+
 	bool fromString4(const char *address);
 	bool fromString6(const char *address);
 
 	size_t printTo(Print& p) ;
+public:
+    bool operator==(const IPAddress& addr) {
+        return compareIP(addr);
+    };
+    bool operator!=(const IPAddress& addr) {
+        return compareIP(addr);
+    };
+    bool operator==(const NetdumpIP& addr) {
+        return compareIP(addr);
+    };
+    bool operator!=(const NetdumpIP& addr) {
+        return !compareIP(addr);
+    };
+
 };
 
 #endif /* LIBRARIES_ESPGOODIES_HR_SRC_NETDUMP_NETDUMPIP_H_ */
