@@ -45,9 +45,12 @@ public:
     void setCallback(NetdumpCallback nc);
     void setCallback(NetdumpCallback nc, NetdumpFilter nf);
     void setFilter(NetdumpFilter nf);
+    void reset();
+
     void printDump(Print& out, bool includeHex, NetdumpFilter nf = nullptr);
     void fileDump(File outfile, NetdumpFilter nf = nullptr);
     void tcpDump(WiFiServer &tcpDumpServer, NetdumpFilter nf = nullptr);
+
 
 private:
     NetdumpCallback netDumpCallback = nullptr;

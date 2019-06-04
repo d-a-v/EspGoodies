@@ -37,6 +37,10 @@ void Netdump::setFilter(NetdumpFilter nf)
 {
 	netDumpFilter = nf;
 }
+void Netdump::reset()
+{
+	setCallback(nullptr,nullptr);
+}
 void Netdump::printDump(Print& out, bool includeHex, NetdumpFilter nf)
 {
 	out.printf("netDump starting\r\n");
@@ -80,7 +84,7 @@ void Netdump::capture (int netif_idx, const char* data, size_t len, int out, int
 
 void Netdump::printDumpProcess(Print& out, bool includeHex, NetdumpPacket np)
 {
-	out.printf("%s",np.toString(includeHex).c_str());
+	out.printf("%8d %s",millis(), np.toString(includeHex).c_str());
 }
 void Netdump::fileDumpProcess (File outfile, NetdumpPacket np)
 {

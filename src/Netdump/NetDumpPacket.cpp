@@ -79,12 +79,12 @@ String NetdumpPacket::toString(bool includeHex)
  		   if (isMDNS() || isDNS())
  		   {
   			  sstr.printf("%s%s>%s ", isMDNS()? "MDNS ":"DNS  ", sourceIP().toString().c_str(),destIP().toString().c_str());
-              sstr.printf("TXID=0x%04x ",ntoh16(ETH_HDR_LEN + getIpHdrLen() + 8));
-              sstr.printf("Flags=0x%04x ",ntoh16(ETH_HDR_LEN + getIpHdrLen() + 8+2));
-              sstr.printf("Q=%d ",ntoh16(ETH_HDR_LEN + getIpHdrLen() + 8+4));
-              sstr.printf("ANR=%d ",ntoh16(ETH_HDR_LEN + getIpHdrLen() + 8+6));
-              sstr.printf("ATR=%d ",ntoh16(ETH_HDR_LEN + getIpHdrLen() + 8+8));
-              sstr.printf("ADR=%d ",ntoh16(ETH_HDR_LEN + getIpHdrLen() + 8+10));
+              sstr.printf("ID=0x%04x ",ntoh16(ETH_HDR_LEN + getIpHdrLen() + 8));
+              sstr.printf("F=0x%04x ",ntoh16(ETH_HDR_LEN + getIpHdrLen() + 8+2));
+              if (uint16_t t = ntoh16(ETH_HDR_LEN + getIpHdrLen() + 8+4)) sstr.printf("Q=%d ",t);
+              if (uint16_t t = ntoh16(ETH_HDR_LEN + getIpHdrLen() + 8+6)) sstr.printf("R=%d ",t);
+              if (uint16_t t = ntoh16(ETH_HDR_LEN + getIpHdrLen() + 8+8)) sstr.printf("TR=%d ",t);
+              if (uint16_t t = ntoh16(ETH_HDR_LEN + getIpHdrLen() + 8+10)) sstr.printf("DR=%d ",t);
               sstr.printf("\r\n");
  		   }
  		   else
