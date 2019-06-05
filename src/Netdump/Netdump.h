@@ -47,7 +47,7 @@ public:
     void setFilter(NetdumpFilter nf);
     void reset();
 
-    void printDump(Print& out, bool includeHex, NetdumpFilter nf = nullptr);
+    void printDump(Print& out, NetdumpPacket::PacketDetail ndd, NetdumpFilter nf = nullptr);
     void fileDump(File outfile, NetdumpFilter nf = nullptr);
     void tcpDump(WiFiServer &tcpDumpServer, NetdumpFilter nf = nullptr);
 
@@ -59,7 +59,7 @@ private:
     static Netdump* self;
 
     static void capture (int netif_idx, const char* data, size_t len, int out, int success);
-    void printDumpProcess(Print& out, bool includeHex, NetdumpPacket np);
+    void printDumpProcess(Print& out, NetdumpPacket::PacketDetail ndd, NetdumpPacket np);
     void fileDumpProcess (File outfile, NetdumpPacket np);
     void tcpDumpProcess(NetdumpPacket np);
     void tcpDumpLoop(WiFiServer &tcpDumpServer);

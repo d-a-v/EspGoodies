@@ -22,30 +22,36 @@
 #include "Netdump.h"
 #include <lwip/init.h>
 
-void NetdumpPacket::dumpHex (Print& out, String indent, const char* data, size_t size)
+void NetdumpPacket::printDetail(Print& out, String indent, const char* data, size_t size, PacketDetail pd)
 {
-    size_t start = 0;
+	if (pd == PacketDetail::NONE) return;
 
+	uint16_t charCount = pd == PacketDetail::FULL ? 24 : 80;
+
+	size_t start = 0;
     while (start < size)
     {
-        size_t end = start + 16;
+        size_t end = start + charCount;
         if (end > size)
             end = size;
         out.printf("%s",indent.c_str());
-        for (size_t i = start; i < end; i++)
-                out.printf("%02x ", (unsigned char)data[i]);
-        for (size_t i = end; i < start + 16; i++)
-                out.print("   ");
+        if (pd == PacketDetail::FULL)
+        {
+            for (size_t i = start; i < end; i++)
+                    out.printf("%02x ", (unsigned char)data[i]);
+            for (size_t i = end; i < start + charCount; i++)
+                    out.print("   ");
+        }
         for (size_t i = start; i < end; i++)
                 out.printf("%c", data[i] >= 32 && data[i] < 128? data[i]: '.');
         out.println();
 
-        start += 16;
+        start += charCount;
     }
 }
 
 
-String NetdumpPacket::toString(bool includeHex)
+String NetdumpPacket::toString(PacketDetail netdumpDetail)
 {
 	StreamString sstr;
 	sstr.reserve(128);
@@ -111,17 +117,13 @@ String NetdumpPacket::toString(bool includeHex)
  			   sstr.printf("%d:%d",getSrcPort(),getDstPort());
  	 		   sstr.printf("\r\n");
  		   }
- 		   if (includeHex)
- 		   {
-         	   dumpHex(sstr,"           H ",&data[ETH_HDR_LEN + getIpHdrLen()],getUdpHdrLen());
-         	   dumpHex(sstr,"           D ",&data[ETH_HDR_LEN + getIpHdrLen() + getUdpHdrLen()],getUdpLen());
- 		   }
-
+ 		   printDetail(sstr,"           H ",&data[ETH_HDR_LEN + getIpHdrLen()],getUdpHdrLen(),netdumpDetail);
+ 		   printDetail(sstr,"           D ",&data[ETH_HDR_LEN + getIpHdrLen() + getUdpHdrLen()],getUdpLen(),netdumpDetail);
  		   return sstr;
  	   }
  	   else if (isTCP())
  	   {
- 		   sstr.printf("TCP  ");
+ 		   sstr.printf(isHTTP() ? "HTTP " : "TCP  ");
      	   sstr.printf("%s>%s ", sourceIP().toString().c_str(),destIP().toString().c_str());
      	   sstr.printf("%d:%d ", getSrcPort(),getDstPort());
      	   uint16_t flags = getTcpFlags();
@@ -133,11 +135,8 @@ String NetdumpPacket::toString(bool includeHex)
      	   sstr.print(']');
      	   sstr.printf(" len: %u seq: %u, ack: %u, wnd: %u ",getTcpLen(), getTcpSeq(),getTcpAck(),getTcpWindow());
      	   sstr.printf("\r\n");
-     	   if (includeHex)
-     	   {
-         	   dumpHex(sstr,"           H ",&data[ETH_HDR_LEN + getIpHdrLen()],getTcpHdrLen());
-         	   dumpHex(sstr,"           D ",&data[ETH_HDR_LEN + getIpHdrLen() + getTcpHdrLen()],getTcpLen());
-     	   }
+       	   printDetail(sstr,"           H ",&data[ETH_HDR_LEN + getIpHdrLen()],getTcpHdrLen(),netdumpDetail);
+       	   printDetail(sstr,"           D ",&data[ETH_HDR_LEN + getIpHdrLen() + getTcpHdrLen()],getTcpLen(),netdumpDetail);
      	   return sstr;
  	   }
  	   else if (isICMP())

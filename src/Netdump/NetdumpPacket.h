@@ -38,6 +38,13 @@ public:
 
     virtual ~NetdumpPacket() {};
 
+    enum class PacketDetail
+	{
+    	NONE,
+		FULL,
+		CHARS
+	};
+
     int netif_idx;
 	const char* data;
 	size_t len;
@@ -87,6 +94,7 @@ public:
 	bool isSSDP()                 { return hasPort(1900);};
 	bool isDHCP()                 { return (hasPort(546) || hasPort(547) || hasPort(67) || hasPort(68));};
 	bool isWSDD()                 { return (hasPort(3702));};
+	bool isHTTP()                 { return (hasPort(80));};
 
 
 	NetdumpIP getIP(uint16_t idx) { return NetdumpIP(data[idx],
@@ -126,8 +134,8 @@ public:
 	uint16_t getDstPort()        { return ntoh16(ETH_HDR_LEN + getIpHdrLen() + 2); }
 	bool     hasPort(uint16_t p) { return ((getSrcPort() == p) || (getDstPort() == p));}
 
-    String toString(bool includeHex = false);
-    void dumpHex (Print& out, String indent, const char* data, size_t size);
+    String toString(PacketDetail netdumpDetail = PacketDetail::NONE);
+    void printDetail (Print& out, String indent, const char* data, size_t size, PacketDetail pd);
 
 };
 

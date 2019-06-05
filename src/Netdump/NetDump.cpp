@@ -41,10 +41,10 @@ void Netdump::reset()
 {
 	setCallback(nullptr,nullptr);
 }
-void Netdump::printDump(Print& out, bool includeHex, NetdumpFilter nf)
+void Netdump::printDump(Print& out, NetdumpPacket::PacketDetail ndd, NetdumpFilter nf)
 {
 	out.printf("netDump starting\r\n");
-	setCallback( std::bind(&Netdump::printDumpProcess, this, std::ref(out), includeHex, std::placeholders::_1), nf);
+	setCallback( std::bind(&Netdump::printDumpProcess, this, std::ref(out), ndd, std::placeholders::_1), nf);
 }
 void Netdump::fileDump(File outfile, NetdumpFilter nf)
 {
@@ -82,9 +82,9 @@ void Netdump::capture (int netif_idx, const char* data, size_t len, int out, int
 	}
 }
 
-void Netdump::printDumpProcess(Print& out, bool includeHex, NetdumpPacket np)
+void Netdump::printDumpProcess(Print& out, NetdumpPacket::PacketDetail ndd, NetdumpPacket np)
 {
-	out.printf("%8d %s",millis(), np.toString(includeHex).c_str());
+	out.printf("%8d %s",millis(), np.toString(ndd).c_str());
 }
 void Netdump::fileDumpProcess (File outfile, NetdumpPacket np)
 {
@@ -124,7 +124,6 @@ void Netdump::tcpDumpProcess(NetdumpPacket np)
 	bufferIndex+=16;
 	memcpy(&packetBuffer[bufferIndex], np.data, incl_len);
     bufferIndex += incl_len;
-	printDumpProcess(Serial, false, np);
 	if (bufferIndex && tcpDumpClient && tcpDumpClient.availableForWrite() >= bufferIndex)
 	{
         tcpDumpClient.write(packetBuffer, bufferIndex);
