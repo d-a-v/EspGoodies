@@ -45,6 +45,10 @@ void Netdump::printDump(Print& out, NetdumpPacket::PacketDetail ndd, NetdumpFilt
 {
 	out.printf("netDump starting\r\n");
 	setCallback( std::bind(&Netdump::printDumpProcess, this, std::ref(out), ndd, std::placeholders::_1), nf);
+//	setCallback([out,ndd](NetdumpPacket& ndp){printDumpProcess(out,ndd,ndp);});
+	setCallback([&out,ndd,this](NetdumpPacket& ndp){printDumpProcess(out,ndd,ndp);},nf);
+
+
 }
 void Netdump::fileDump(File outfile, NetdumpFilter nf)
 {
@@ -59,7 +63,8 @@ void Netdump::fileDump(File outfile, NetdumpFilter nf)
 	*(uint32_t*)&buf[20] = 1;
 
 	outfile.write(buf,24);
-	setCallback( std::bind(&Netdump::fileDumpProcess, this, outfile, std::placeholders::_1));
+//	setCallback( std::bind(&Netdump::fileDumpProcess, this, outfile, std::placeholders::_1));
+	setCallback([outfile,this](NetdumpPacket& ndp){fileDumpProcess(outfile,ndp);},nf );
 }
 void Netdump::tcpDump(WiFiServer &tcpDumpServer, NetdumpFilter nf)
 {
@@ -68,7 +73,8 @@ void Netdump::tcpDump(WiFiServer &tcpDumpServer, NetdumpFilter nf)
 	packetBuffer = new char[2048];
 	bufferIndex = 0;
 
-	schedule_function(std::bind(&Netdump::tcpDumpLoop,this,std::ref(tcpDumpServer)));
+//	schedule_function(std::bind(&Netdump::tcpDumpLoop,this,std::ref(tcpDumpServer)));
+	schedule_function([&tcpDumpServer,this](){tcpDumpLoop(tcpDumpServer);});
 	Serial.printf("scheduled\r\n");
 }
 
@@ -151,7 +157,9 @@ void Netdump::tcpDumpLoop(WiFiServer &tcpDumpServer)
         *(uint32_t*)&packetBuffer[20] = 1;
         tcpDumpClient.write(packetBuffer, 24);
         bufferIndex = 0;
-        setCallback(std::bind(&Netdump::tcpDumpProcess,this,std::placeholders::_1));
+//      setCallback(std::bind(&Netdump::tcpDumpProcess,this,std::placeholders::_1));
+        setCallback([this](NetdumpPacket& ndp){tcpDumpProcess(ndp);});
+
         Serial.printf("client started\r\n");
     }
     if (!tcpDumpClient || !tcpDumpClient.connected())
@@ -164,5 +172,6 @@ void Netdump::tcpDumpLoop(WiFiServer &tcpDumpServer)
         tcpDumpClient.write(packetBuffer, bufferIndex);
         bufferIndex = 0;
     }
-    schedule_function(std::bind(&Netdump::tcpDumpLoop,this,std::ref(tcpDumpServer)));
+//  schedule_function(std::bind(&Netdump::tcpDumpLoop,this,std::ref(tcpDumpServer)));
+    schedule_function([&tcpDumpServer,this](){tcpDumpLoop(tcpDumpServer);});
 }
