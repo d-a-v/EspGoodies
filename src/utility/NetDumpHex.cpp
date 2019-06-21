@@ -19,7 +19,7 @@
  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
-#include <NetDump.h>
+#include <NetDumpDAV.h>
 
 void netDumpHex (Print& out, const char* data, size_t size, bool show_hex, bool show_ascii, size_t per_line)
 {
