@@ -1,20 +1,20 @@
 /*
- * NetdumpIP.cpp
- *
- *  Created on: 18 mei 2019
- *      Author: Herman
- */
+    NetdumpIP.cpp
+
+    Created on: 18 mei 2019
+        Author: Herman
+*/
 #include <Arduino.h>
 #include <Netdump/NetdumpIP.h>
 
 NetdumpIP::NetdumpIP()
 {
-	// TODO Auto-generated constructor stub
+    // TODO Auto-generated constructor stub
 }
 
 NetdumpIP::~NetdumpIP()
 {
-	// TODO Auto-generated destructor stub
+    // TODO Auto-generated destructor stub
 }
 
 NetdumpIP::NetdumpIP(uint8_t first_octet, uint8_t second_octet, uint8_t third_octet, uint8_t fourth_octet)
@@ -28,63 +28,66 @@ NetdumpIP::NetdumpIP(uint8_t first_octet, uint8_t second_octet, uint8_t third_oc
 
 NetdumpIP::NetdumpIP(const uint8_t *address, bool v4)
 {
-	uint8_t cnt;
+    uint8_t cnt;
     if (v4)
     {
-    	cnt = 4;
-    	setV4();
+        cnt = 4;
+        setV4();
     }
     else
     {
-    	cnt = 16;
-    	setV6();
+        cnt = 16;
+        setV6();
     }
-    for (int i=0;i<cnt;i++)
+    for (int i = 0; i < cnt; i++)
     {
-    	(*this)[i] = address[i];
+        (*this)[i] = address[i];
     }
 }
 
 NetdumpIP::NetdumpIP(IPAddress ip)
 {
-	if (!ip.isSet())
-	{
-		setUnset();
-	}
-	else if (ip.isV4())
-	{
-		setV4();
-		for (int i=0;i<4;i++)
-		{
-			rawip[i] = ip[i];
-		}
-	}
-	else
-	{
-		setV6();
-		for (int i=0;i<16;i++)
-		{
-			rawip[i] = ip[i];
-		}
-	}
+    if (!ip.isSet())
+    {
+        setUnset();
+    }
+    else if (ip.isV4())
+    {
+        setV4();
+        for (int i = 0; i < 4; i++)
+        {
+            rawip[i] = ip[i];
+        }
+    }
+    else
+    {
+        setV6();
+        for (int i = 0; i < 16; i++)
+        {
+            rawip[i] = ip[i];
+        }
+    }
 }
 
 NetdumpIP::NetdumpIP(String ip)
 {
-	if (!fromString(ip.c_str()))
-	{
-	   	setUnset();
-	}
+    if (!fromString(ip.c_str()))
+    {
+        setUnset();
+    }
 }
 
-bool NetdumpIP::fromString(const char *address) {
-    if (!fromString4(address)) {
+bool NetdumpIP::fromString(const char *address)
+{
+    if (!fromString4(address))
+    {
         return fromString6(address);
     }
     return true;
 }
 
-bool NetdumpIP::fromString4(const char *address) {
+bool NetdumpIP::fromString4(const char *address)
+{
     // TODO: (IPv4) add support for "a", "a.b", "a.b.c" formats
 
     uint16_t acc = 0; // Accumulator
@@ -96,14 +99,16 @@ bool NetdumpIP::fromString4(const char *address) {
         if (c >= '0' && c <= '9')
         {
             acc = acc * 10 + (c - '0');
-            if (acc > 255) {
+            if (acc > 255)
+            {
                 // Value out of [0..255] range
                 return false;
             }
         }
         else if (c == '.')
         {
-            if (dots == 3) {
+            if (dots == 3)
+            {
                 // Too much dots (there must be 3 dots)
                 return false;
             }
@@ -117,7 +122,8 @@ bool NetdumpIP::fromString4(const char *address) {
         }
     }
 
-    if (dots != 3) {
+    if (dots != 3)
+    {
         // Too few dots (there must be 3 dots)
         return false;
     }
@@ -137,44 +143,64 @@ bool NetdumpIP::fromString6(const char *address)
     while (*address)
     {
         char c = tolower(*address++);
-        if (isalnum(c)) {
+        if (isalnum(c))
+        {
             if (c >= 'a')
+            {
                 c -= 'a' - '0' - 10;
+            }
             acc = acc * 16 + (c - '0');
             if (acc > 0xffff)
                 // Value out of range
+            {
                 return false;
+            }
         }
-        else if (c == ':') {
-            if (*address == ':') {
+        else if (c == ':')
+        {
+            if (*address == ':')
+            {
                 if (doubledots >= 0)
                     // :: allowed once
+                {
                     return false;
+                }
                 // remember location
                 doubledots = dots + !!acc;
                 address++;
             }
             if (dots == 7)
                 // too many separators
+            {
                 return false;
+            }
             reinterpret_cast<uint16_t*>(rawip)[dots++] = PP_HTONS(acc);
             acc = 0;
         }
         else
             // Invalid char
+        {
             return false;
+        }
     }
 
     if (doubledots == -1 && dots != 7)
         // Too few separators
+    {
         return false;
+    }
     reinterpret_cast<uint16_t*>(rawip)[dots++] = PP_HTONS(acc);
 
-    if (doubledots != -1) {
+    if (doubledots != -1)
+    {
         for (int i = dots - doubledots - 1; i >= 0; i--)
-        	reinterpret_cast<uint16_t*>(rawip)[8 - dots + doubledots + i] = reinterpret_cast<uint16_t*>(rawip)[doubledots + i];
+        {
+            reinterpret_cast<uint16_t*>(rawip)[8 - dots + doubledots + i] = reinterpret_cast<uint16_t*>(rawip)[doubledots + i];
+        }
         for (int i = doubledots; i < 8 - dots + doubledots; i++)
-        	reinterpret_cast<uint16_t*>(rawip)[i] = 0;
+        {
+            reinterpret_cast<uint16_t*>(rawip)[i] = 0;
+        }
     }
 
     setV6();
@@ -186,7 +212,7 @@ String NetdumpIP::toString()
     StreamString sstr;
     if (isV6())
     {
-    	sstr.reserve(40); // 8 shorts x 4 chars each + 7 colons + nullterm
+        sstr.reserve(40); // 8 shorts x 4 chars each + 7 colons + nullterm
 
     }
     else
@@ -197,79 +223,140 @@ String NetdumpIP::toString()
     return sstr;
 }
 
-size_t NetdumpIP::printTo(Print& p) {
+size_t NetdumpIP::printTo(Print& p)
+{
     size_t n = 0;
 
     if (!isSet())
+    {
         return p.print(F("(IP unset)"));
+    }
 
-    if (isV6()) {
+    if (isV6())
+    {
         int count0 = 0;
-        for (int i = 0; i < 8; i++) {
+        for (int i = 0; i < 8; i++)
+        {
             uint16_t bit = PP_NTOHS(reinterpret_cast<const uint16_t*>(rawip)[i]);
-            if (bit || count0 < 0) {
+            if (bit || count0 < 0)
+            {
                 n += p.printf("%x", bit);
                 if (count0 > 0)
                     // no more hiding 0
+                {
                     count0 = -8;
-            } else
+                }
+            }
+            else
+            {
                 count0++;
+            }
             if ((i != 7 && count0 < 2) || count0 == 7)
+            {
                 n += p.print(':');
+            }
         }
         return n;
     }
-    for(int i = 0; i < 4; i++) {
+    for (int i = 0; i < 4; i++)
+    {
         n += p.print((*this)[i], DEC);
         if (i != 3)
+        {
             n += p.print('.');
+        }
     }
     return n;
 }
 
 bool NetdumpIP::compareRaw(IPversion v, const uint8_t* a,  const uint8_t* b)
 {
-	for (int i=0;i<(v==IPversion::IPV4?4:16);i++)
-	{
-		if (a[i] != b[i]) return false;
-	}
-	return true;
+    for (int i = 0; i < (v == IPversion::IPV4 ? 4 : 16); i++)
+    {
+        if (a[i] != b[i])
+        {
+            return false;
+        }
+    }
+    return true;
 }
 
 bool NetdumpIP::compareIP(IPAddress ip)
 {
-	switch (ipv)
-	{
-	case IPversion::UNSET :
-		if (ip.isSet()) return false; else return true;
-		break;
-	case IPversion::IPV4 :
-		if (ip.isV6() || !ip.isSet()) return false; else return compareRaw(IPversion::IPV4,rawip,&ip[0]);
-		break;
-	case IPversion::IPV6 :
-		if (ip.isV4() || !ip.isSet()) return false; else return compareRaw(IPversion::IPV6,rawip,&ip[0]);
-		break;
-	default :
-		return false;
-		break;
-	}
+    switch (ipv)
+    {
+    case IPversion::UNSET :
+        if (ip.isSet())
+        {
+            return false;
+        }
+        else
+        {
+            return true;
+        }
+        break;
+    case IPversion::IPV4 :
+        if (ip.isV6() || !ip.isSet())
+        {
+            return false;
+        }
+        else
+        {
+            return compareRaw(IPversion::IPV4, rawip, &ip[0]);
+        }
+        break;
+    case IPversion::IPV6 :
+        if (ip.isV4() || !ip.isSet())
+        {
+            return false;
+        }
+        else
+        {
+            return compareRaw(IPversion::IPV6, rawip, &ip[0]);
+        }
+        break;
+    default :
+        return false;
+        break;
+    }
 }
 
 bool NetdumpIP::compareIP(NetdumpIP nip)
 {
-	switch (ipv)
-	{
-	case IPversion::UNSET :
-		if (nip.isSet()) return false; else return true;
-		break;
-	case IPversion::IPV4 :
-		if (nip.isV6() || !nip.isSet()) return false; else return compareRaw(IPversion::IPV4,rawip,nip.rawip);
-		break;
-	case IPversion::IPV6 :
-		if (nip.isV4() || !nip.isSet()) return false; else return compareRaw(IPversion::IPV6,rawip,nip.rawip);
-		break;
-	default :
-		return false;
-		break;
-	}
+    switch (ipv)
+    {
+    case IPversion::UNSET :
+        if (nip.isSet())
+        {
+            return false;
+        }
+        else
+        {
+            return true;
+        }
+        break;
+    case IPversion::IPV4 :
+        if (nip.isV6() || !nip.isSet())
+        {
+            return false;
+        }
+        else
+        {
+            return compareRaw(IPversion::IPV4, rawip, nip.rawip);
+        }
+        break;
+    case IPversion::IPV6 :
+        if (nip.isV4() || !nip.isSet())
+        {
+            return false;
+        }
+        else
+        {
+            return compareRaw(IPversion::IPV6, rawip, nip.rawip);
+        }
+        break;
+    default :
+        return false;
+        break;
+    }
 }
